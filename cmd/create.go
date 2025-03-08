@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"strings"
+	"time"
+	"weaver/cmd/flows"
 
 	"github.com/spf13/cobra"
 )
@@ -20,6 +22,16 @@ var createCmd = &cobra.Command{
 		name = strings.TrimSpace(name)
 
 		auth, _ := cmd.Flags().GetStringArray("auth")
+
+		if name == "" {
+			name = flows.TextFlow()
+			time.Sleep(5 * time.Millisecond)
+			confirm := flows.ConformationFlow()
+			for !confirm {
+				name = flows.TextFlow()
+				confirm = flows.ConformationFlow()
+			}
+		}
 
 		fmt.Println(name, frameWork, auth)
 	},
