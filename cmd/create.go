@@ -33,6 +33,11 @@ var createCmd = &cobra.Command{
 			}
 		}
 
+		if frameWork != "echo" && frameWork != "chi" && frameWork != "fiber" && frameWork != "gin" && frameWork != "http" {
+			time.Sleep(5 * time.Millisecond)
+			frameWork = flows.ListFlow()
+		}
+
 		fmt.Println(name, frameWork, auth)
 	},
 }
