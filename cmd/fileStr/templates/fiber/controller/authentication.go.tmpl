@@ -1,0 +1,101 @@
+package controller
+
+import (
+    "{{ .Name }}/auth"
+    "{{ .Name }}/utils"
+	{{- if contains "discord" .Auth }}
+    "encoding/json"
+    "net/http"
+	{{- end}}
+    "log"
+
+    "github.com/gofiber/fiber/v2"
+)
+
+func Auth(c *fiber.Ctx) error {
+    provider := c.Params("provider")
+    
+    {{- if contains "google" .Auth }}
+    if provider == "google" {
+        path := auth.ConfigGoogle()
+        url := path.AuthCodeURL("state")
+        return c.Redirect(url)
+    }
+    {{- end }}
+    
+    {{- if contains "github" .Auth }}
+    if provider == "github" {
+        path := auth.ConfigGithub()
+        url := path.AuthCodeURL("")
+        return c.Redirect(url)
+    }
+    {{- end }}
+    
+    {{- if contains "discord" .Auth }}
+    if provider == "discord" {
+        path := auth.ConfigDiscord()
+        url := path.AuthCodeURL("state")
+        return c.Redirect(url)
+    }
+    {{- end }}
+    
+    log.Println("error no supported provider")
+    return c.Status(400).JSON(fiber.Map{"error": "Unsupported provider"})
+}
+
+func Callback(c *fiber.Ctx) error {
+    provider := c.Params("provider")
+    
+    {{- if contains "google" .Auth }}
+    if provider == "google" {
+        token, error := auth.ConfigGoogle().Exchange(c.Context(), c.FormValue("code"))
+        utils.CheckErr(error)
+        email := auth.GetEmail(token.AccessToken)
+        pic := auth.GetPicture(token.AccessToken)
+        return c.Status(200).JSON(fiber.Map{"email": email, "login": true, "token": token.AccessToken, "picture": pic})
+    }
+    {{- end }}
+    
+    {{- if contains "github" .Auth }}
+    if provider == "github" {
+        token, error := auth.ConfigGithub().Exchange(c.Context(), c.FormValue("code"))
+        utils.CheckErr(error)
+        email := auth.GetEmailGithub(token.AccessToken)
+        return c.Status(200).JSON(fiber.Map{"email": email, "login": true, "token": token.AccessToken})
+    }
+    {{- end }}
+    
+    {{- if contains "discord" .Auth }}
+    if provider == "discord" {
+        token, error := auth.ConfigDiscord().Exchange(c.Context(), c.FormValue("code"))
+        utils.CheckErr(error)
+        email := auth.GetDiscordEmail(token.AccessToken)
+
+        req, err := http.NewRequest("GET", "https://discord.com/api/users/@me", nil)
+        utils.CheckErr(err)
+        req.Header.Set("Authorization", "Bearer "+token.AccessToken)
+
+        client := &http.Client{}
+        resp, err := client.Do(req)
+        utils.CheckErr(err)
+        defer resp.Body.Close()
+
+        var user struct {
+            ID string `json:"id"`
+        }
+        if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+            panic(err)
+        }
+
+        avatar := auth.GetDiscordAvatar(token.AccessToken, user.ID)
+        return c.Status(200).JSON(fiber.Map{
+            "email":   email,
+            "login":   true,
+            "token":   token.AccessToken,
+            "picture": avatar,
+        })
+    }
+    {{- end }}
+    
+    return c.Status(400).JSON(fiber.Map{"error": "Invalid provider"})
+}

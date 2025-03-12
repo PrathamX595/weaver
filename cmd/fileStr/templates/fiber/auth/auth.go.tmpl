@@ -1,0 +1,195 @@
+package auth
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+
+	"{{ .Name }}/config"
+	"{{ .Name }}/models"
+	"{{ .Name }}/utils"
+
+{{- if hasAuth .Auth }}
+	"golang.org/x/oauth2"
+	{{- if contains "google" .Auth }}
+	"golang.org/x/oauth2/google"
+	{{- end }}
+	{{- if contains "github" .Auth }}
+    "golang.org/x/oauth2/github"
+    {{- end }}
+{{- end }}
+	
+)
+
+{{- if contains "google" .Auth }}
+func ConfigGoogle() *oauth2.Config {
+	conf := &oauth2.Config{
+		ClientID:     config.GetEnv("CLIENT_ID"),
+		ClientSecret: config.GetEnv("CLIENT_SECRET"),
+		RedirectURL:  config.GetEnv("RedirectURL"),
+		Scopes: []string{
+			"https://www.googleapis.com/auth/userinfo.email",
+		},
+		Endpoint: google.Endpoint,
+	}
+	return conf
+}
+
+func GetEmail(token string) string {
+	reqURL, err := url.Parse("https://www.googleapis.com/oauth2/v1/userinfo")
+	utils.CheckErr(err)
+	ptoken := fmt.Sprintf("Bearer %s", token)
+	res := &http.Request{
+		Method: "GET",
+		URL:    reqURL,
+		Header: map[string][]string{
+			"Authorization": {ptoken},
+		},
+	}
+	req, err := http.DefaultClient.Do(res)
+	utils.CheckErr(err)
+	defer req.Body.Close()
+	body, err := io.ReadAll(req.Body)
+	utils.CheckErr(err)
+	var data models.GoogleResponse
+	err = json.Unmarshal(body, &data)
+	utils.CheckErr(err)
+	return data.Email
+}
+
+func GetPicture(token string) string {
+	reqURL, err := url.Parse("https://www.googleapis.com/oauth2/v1/userinfo")
+	if err != nil {
+		panic(err)
+	}
+	ptoken := fmt.Sprintf("Bearer %s", token)
+	res := &http.Request{
+		Method: "GET",
+		URL:    reqURL,
+		Header: map[string][]string{
+			"Authorization": {ptoken},
+		},
+	}
+	req, err := http.DefaultClient.Do(res)
+	if err != nil {
+		panic(err)
+	}
+	defer req.Body.Close()
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		panic(err)
+	}
+	var data models.GoogleResponse
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		panic(err)
+	}
+	return data.Picture
+}
+{{- end }}
+{{- if contains "github" .Auth }}
+func ConfigGithub() *oauth2.Config {
+	conf := &oauth2.Config{
+		ClientID:     config.GetEnv("GH_CLIENT_ID"),
+		ClientSecret: config.GetEnv("GH_CLIENT_SECRET"),
+		RedirectURL:  config.GetEnv("GH_RedirectURL"),
+		Scopes: []string{
+			"read:user",
+			"user:email",
+		},
+		Endpoint: github.Endpoint,
+	}
+	return conf
+}
+
+func GetEmailGithub(accessToken string) string {
+	req, err := http.NewRequest("GET", "https://api.github.com/user/emails", nil)
+	utils.CheckErr(err)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	utils.CheckErr(err)
+	defer resp.Body.Close()
+
+	var emails []struct {
+		Email    string `json:"email"`
+		Primary  bool   `json:"primary"`
+		Verified bool   `json:"verified"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&emails); err != nil {
+		panic(err)
+	}
+
+	for _, e := range emails {
+		if e.Primary && e.Verified {
+			return e.Email
+		}
+	}
+	return ""
+}
+{{- end }}
+
+{{- if contains "discord" .Auth }}
+func ConfigDiscord() *oauth2.Config {
+	conf := &oauth2.Config{
+		ClientID:     config.GetEnv("DISCORD_CLIENT_ID"),
+		ClientSecret: config.GetEnv("DISCORD_CLIENT_SECRET"),
+		RedirectURL:  config.GetEnv("DISCORD_RedirectURL"),
+		Scopes: []string{
+			"identify",
+			"email",
+		},
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  "https://discord.com/api/oauth2/authorize",
+			TokenURL: "https://discord.com/api/oauth2/token",
+		},
+	}
+	return conf
+}
+
+func GetDiscordEmail(token string) string {
+	req, err := http.NewRequest("GET", "https://discord.com/api/users/@me", nil)
+	utils.CheckErr(err)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	utils.CheckErr(err)
+	defer resp.Body.Close()
+
+	var user models.DiscordResponse
+	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+		panic(err)
+	}
+	return user.Email
+}
+
+func GetDiscordAvatar(token string, userId string) string {
+	req, err := http.NewRequest("GET", "https://discord.com/api/users/@me", nil)
+	utils.CheckErr(err)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	utils.CheckErr(err)
+	defer resp.Body.Close()
+
+	var user struct {
+		ID            string `json:"id"`
+		Avatar        string `json:"avatar"`
+		Discriminator string `json:"discriminator"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+		panic(err)
+	}
+
+	if user.Avatar != "" {
+		return fmt.Sprintf("https://cdn.discordapp.com/avatars/%s/%s.png", user.ID, user.Avatar)
+	}
+	return ""
+}
+{{- end }}

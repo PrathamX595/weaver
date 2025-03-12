@@ -1,0 +1,28 @@
+package router
+
+import (
+	"{{ .Name }}/controller"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+)
+
+func Router(app *fiber.App) {
+	api := app.Group("/api", logger.New())
+	{{- if hasAuth .Auth }}
+	auth := app.Group("/api/auth", logger.New())
+	{{- end }}
+
+	api.Get("/", controller.GetAll)
+	api.Get("/:id", controller.Get)
+	api.Post("/", controller.Create)
+	api.Put("/:id", controller.Update)
+	api.Delete("/:id", controller.Delete)
+	api.Delete("/", controller.DeleteAll)
+
+	{{- if hasAuth .Auth }}
+	auth.Get("/:provider", controller.Auth)
+	auth.Get("/:provider/callback", controller.Callback)
+	{{- end }}
+
+}
