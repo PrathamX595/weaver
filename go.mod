@@ -1,4 +1,4 @@
-module weaver
+module github.com/PrathamX595/weaver
 
 go 1.24.0
 

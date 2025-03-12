@@ -1,7 +1,7 @@
 package flows
 
 import (
-    "weaver/cmd/components"
+    "github.com/PrathamX595/weaver/cmd/components"
     tea "github.com/charmbracelet/bubbletea"
 )
 

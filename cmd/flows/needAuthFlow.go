@@ -6,15 +6,14 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func ConformationFlow() bool {
-
-	p := tea.NewProgram(components.InitConfirm(), tea.WithAltScreen())
+func NeedAuthFlow() bool {
+	p := tea.NewProgram(components.InitAuth(), tea.WithAltScreen())
 	finalModel, err := p.Run()
 	if err != nil {
 		panic(err)
 	}
-	if l, ok := finalModel.(components.Confirm); ok {
-		return l.GetConfVal()
+	if a, ok := finalModel.(components.NeedAuth); ok {
+		return a.NeedsAuth()
 	}
 	return false
 }

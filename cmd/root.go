@@ -18,8 +18,7 @@ It removes the constant rewrite of boiler plate code used in every project
 	-Fiber
 	-Standard Http
 	-echo
-	-chi
-	-gin`,
+	-chi`,
 }
 
 func Execute() {
