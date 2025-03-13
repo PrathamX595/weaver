@@ -1,0 +1,57 @@
+package controller
+
+import (
+    "context"
+    "encoding/json"
+    "net/http"
+    "{{ .Name }}/config"
+    "{{ .Name }}/utils"
+
+    "github.com/go-chi/chi/v5"
+    "go.mongodb.org/mongo-driver/bson"
+    "go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+func Get(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json")
+    id := chi.URLParam(r, "id")
+    objID, err := primitive.ObjectIDFromHex(id)
+    utils.CheckErr(err)
+
+    filter := bson.M{"_id": objID}
+    var user bson.M
+    
+    cur, err := config.Col.Find(context.Background(), filter)
+    utils.CheckErr(err)
+
+    defer cur.Close(context.Background())
+    
+    if cur.Next(context.Background()) {
+        err := cur.Decode(&user)
+        utils.CheckErr(err)
+    } else {
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"error": "User not found"})
+        return
+    }
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(user)
+}
+
+func GetAll(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json")
+    cur, err := config.Col.Find(context.Background(), bson.D{{`{{`}}{{`}}`}})
+    utils.CheckErr(err)
+    defer cur.Close(context.Background())
+    
+    var users []bson.M
+    for cur.Next(context.Background()) {
+        var user bson.M
+        err := cur.Decode(&user)
+        utils.CheckErr(err)
+        users = append(users, user)
+    }
+    
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(users)
+}

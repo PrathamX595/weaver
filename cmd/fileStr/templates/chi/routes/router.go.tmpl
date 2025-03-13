@@ -1,0 +1,31 @@
+package routes
+
+import (
+    "{{ .Name }}/controller"
+
+    "github.com/go-chi/chi/v5"
+    "github.com/go-chi/chi/v5/middleware"
+)
+
+func RegisterRoutes(r chi.Router) {
+    r.Route("/api", func(r chi.Router) {
+        r.Use(middleware.Logger)
+        
+        r.Get("/", controller.GetAll)
+        r.Get("/{id}", controller.Get)
+        r.Post("/", controller.Create)
+        r.Put("/{id}", controller.Update)
+        r.Delete("/{id}", controller.Delete)
+        r.Delete("/", controller.DeleteAll)
+    })
+
+    {{- if hasAuth .Auth }}
+    r.Route("/api/auth", func(r chi.Router) {
+        r.Use(middleware.Logger)
+        
+        r.Get("/{provider}", controller.Auth)
+        r.Get("/{provider}/callback", controller.Callback)
+    })
+    {{- end }}
+
+}

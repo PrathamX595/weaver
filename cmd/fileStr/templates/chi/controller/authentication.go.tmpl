@@ -1,0 +1,160 @@
+package controller
+
+import (
+    "context"
+    "encoding/json"
+    "log"
+    "net/http"
+    "{{ .Name }}/auth"
+    "{{ .Name }}/utils"
+
+    "github.com/go-chi/chi/v5"
+)
+
+func Auth(w http.ResponseWriter, r *http.Request) {
+    provider := chi.URLParam(r, "provider")
+    
+    {{- if contains "google" .Auth }}
+    if provider == "google" {
+        path := auth.ConfigGoogle()
+        url := path.AuthCodeURL("state")
+        http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+        return
+    }
+    {{- end }}
+    
+    {{- if contains "github" .Auth }}
+    if provider == "github" {
+        path := auth.ConfigGithub()
+        url := path.AuthCodeURL("")
+        http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+        return
+    }
+    {{- end }}
+    
+    {{- if contains "discord" .Auth }}
+    if provider == "discord" {
+        path := auth.ConfigDiscord()
+        url := path.AuthCodeURL("state")
+        http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+        return
+    }
+    {{- end }}
+    
+    log.Println("error no supported provider")
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusBadRequest)
+    json.NewEncoder(w).Encode(map[string]string{"error": "Unsupported provider"})
+}
+
+func Callback(w http.ResponseWriter, r *http.Request) {
+    provider := chi.URLParam(r, "provider")
+    
+    w.Header().Set("Content-Type", "application/json")
+    
+    {{- if contains "google" .Auth }}
+    if provider == "google" {
+        code := r.URL.Query().Get("code")
+        
+        token, err := auth.ConfigGoogle().Exchange(context.Background(), code)
+        if err != nil {
+            utils.CheckErr(err)
+            w.WriteHeader(http.StatusInternalServerError)
+            json.NewEncoder(w).Encode(map[string]string{"error": "Failed to exchange token"})
+            return
+        }
+        
+        email := auth.GetEmail(token.AccessToken)
+        pic := auth.GetPicture(token.AccessToken)
+        
+        w.WriteHeader(http.StatusOK)
+        json.NewEncoder(w).Encode(map[string]interface{}{
+            "email":   email,
+            "login":   true,
+            "token":   token.AccessToken,
+            "picture": pic,
+        })
+        return
+    }
+    {{- end }}
+    
+    {{- if contains "github" .Auth }}
+    if provider == "github" {
+        code := r.URL.Query().Get("code")
+        
+        token, err := auth.ConfigGithub().Exchange(context.Background(), code)
+        if err != nil {
+            utils.CheckErr(err)
+            w.WriteHeader(http.StatusInternalServerError)
+            json.NewEncoder(w).Encode(map[string]string{"error": "Failed to exchange token"})
+            return
+        }
+        
+        email := auth.GetEmailGithub(token.AccessToken)
+
+        w.WriteHeader(http.StatusOK)
+        json.NewEncoder(w).Encode(map[string]interface{}{
+            "email": email,
+            "login": true,
+            "token": token.AccessToken,
+        })
+        return
+    }
+    {{- end }}
+    
+    {{- if contains "discord" .Auth }}
+    if provider == "discord" {
+        code := r.URL.Query().Get("code")
+        token, err := auth.ConfigDiscord().Exchange(context.Background(), code)
+        if err != nil {
+            utils.CheckErr(err)
+            w.WriteHeader(http.StatusInternalServerError)
+            json.NewEncoder(w).Encode(map[string]string{"error": "Failed to exchange token"})
+            return
+        }
+        email := auth.GetDiscordEmail(token.AccessToken)
+        req, err := http.NewRequest("GET", "https://discord.com/api/users/@me", nil)
+        if err != nil {
+            utils.CheckErr(err)
+            w.WriteHeader(http.StatusInternalServerError)
+            json.NewEncoder(w).Encode(map[string]string{"error": "Failed to create request"})
+            return
+        }
+        
+        req.Header.Set("Authorization", "Bearer "+token.AccessToken)
+        
+        client := &http.Client{}
+        resp, err := client.Do(req)
+        if err != nil {
+            utils.CheckErr(err)
+            w.WriteHeader(http.StatusInternalServerError)
+            json.NewEncoder(w).Encode(map[string]string{"error": "Failed to execute request"})
+            return
+        }
+        defer resp.Body.Close()
+        
+        var user struct {
+            ID string `json:"id"`
+        }
+        if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+            utils.CheckErr(err)
+            w.WriteHeader(http.StatusInternalServerError)
+            json.NewEncoder(w).Encode(map[string]string{"error": "Failed to decode user data"})
+            return
+        }
+        
+        avatar := auth.GetDiscordAvatar(token.AccessToken, user.ID)
+        w.WriteHeader(http.StatusOK)
+        json.NewEncoder(w).Encode(map[string]interface{}{
+            "email":   email,
+            "login":   true,
+            "token":   token.AccessToken,
+            "picture": avatar,
+        })
+        return
+    }
+    {{- end }}
+    
+    w.WriteHeader(http.StatusBadRequest)
+    json.NewEncoder(w).Encode(map[string]string{"error": "Invalid provider"})
+}

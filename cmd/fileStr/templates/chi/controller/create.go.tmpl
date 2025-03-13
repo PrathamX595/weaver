@@ -1,0 +1,21 @@
+package controller
+
+import (
+    "context"
+    "encoding/json"
+    "net/http"
+    "{{ .Name }}/config"
+    "{{ .Name }}/models"
+    "{{ .Name }}/utils"
+)
+
+func Create(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json")
+    var user models.User
+    err := json.NewDecoder(r.Body).Decode(&user)
+    utils.CheckErr(err)
+    result, err := config.Col.InsertOne(context.Background(), user)
+    utils.CheckErr(err)
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(result)
+}

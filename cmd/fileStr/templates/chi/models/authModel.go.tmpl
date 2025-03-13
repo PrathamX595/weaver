@@ -1,0 +1,32 @@
+package models
+
+{{- if contains "google" .Auth }}
+type GoogleResponse struct {
+	ID       string `json:"id"`
+	Email    string `json:"email"`
+	Verified bool   `json:"verified_email"`
+	Picture  string `json:"picture"`
+}
+{{- end}}
+
+{{- if contains "github" .Auth }}
+type GithubResponse struct {
+	ID       int `json:"id"`
+	Email    string `json:"email"`
+	Verified bool   `json:"verified_email"`
+	Picture  string `json:"picture"`
+}
+{{- end }}
+
+{{- if contains "discord" .Auth }}
+type DiscordResponse struct {
+    ID            string `json:"id"`
+    Username      string `json:"username"`
+    Discriminator string `json:"discriminator"`
+    Avatar        string `json:"avatar"`
+    Email         string `json:"email"`
+    Verified      bool   `json:"verified"`
+    Locale        string `json:"locale"`
+    MFAEnabled    bool   `json:"mfa_enabled"`
+}
+{{- end}}
