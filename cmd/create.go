@@ -57,7 +57,7 @@ func isSelectedFramework(frameWork string) bool {
 }
 
 func setupProject(name string, frameWork string, auth []string, hasAuth bool) (string, string, []string) {
-	if name == "" {
+	for name == "" {
 		name = flows.TextFlow()
 		time.Sleep(5 * time.Millisecond)
 		confirm := flows.ConformationFlow()
