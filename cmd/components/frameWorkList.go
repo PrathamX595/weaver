@@ -1,88 +1,76 @@
 package components
 
 import (
-	"fmt"
-
+	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
-type List struct {
-    choices  []string
-    cursor   int
-    selected string
-    ready    bool
+var docStyle = lipgloss.NewStyle().Margin(1, 2)
+
+type item struct {
+	title, desc string
 }
 
-func InitList() List {
-    return List{
-        choices: []string{"Chi", "Echo", "Fiber", "Http"},
-        ready:   false,
-    }
+func (i item) Title() string       { return i.title }
+func (i item) Description() string { return i.desc }
+func (i item) FilterValue() string { return i.title }
+
+type ListModel struct {
+	list     list.Model
+	selected string
 }
 
-func (m List) Init() tea.Cmd {
-    return waitForReady()
+func (m ListModel) Init() tea.Cmd {
+	return nil
 }
 
-func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func InitList() ListModel {
+	items := []list.Item{
+		item{title: "Chi", desc: "Lightweight, idiomatic and composable router for Go"},
+		item{title: "Echo", desc: "High performance, minimalist web framework"},
+		item{title: "Fiber", desc: "Express-inspired web framework built on Fasthttp"},
+		item{title: "Http", desc: "Standard library http package for Go"},
+	}
+
+	l := list.New(items, list.NewDefaultDelegate(), 0, 0)
+	l.Title = "Select a framework"
+	l.SetShowStatusBar(false)
+	l.SetFilteringEnabled(false)
+	l.Styles.Title = lipgloss.NewStyle().MarginLeft(2)
+
+	return ListModel{list: l}
+}
+
+func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case readyMsg:
-        m.ready = true
-        return m, nil
 	case tea.KeyMsg:
-		if !m.ready {
-            return m, nil
-        }
-		switch msg.String() {
-		case "ctrl+c", "c":
+		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
-
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-
-		case "down", "j":
-			if m.cursor < len(m.choices)-1 {
-				m.cursor++
-			}
-
-		case "enter", " ":
-			if len(m.selected) >=1 {
-				m.selected = ""
-				m.selected = m.choices[m.cursor]
-			}else{
-				m.selected = m.choices[m.cursor]
-			}
 		}
+
+		if msg.String() == "enter" {
+			// Store selected item when Enter is pressed
+			if i, ok := m.list.SelectedItem().(item); ok {
+				m.selected = i.Title()
+			}
+			return m, tea.Quit
+		}
+
+	case tea.WindowSizeMsg:
+		h, v := docStyle.GetFrameSize()
+		m.list.SetSize(msg.Width-h, msg.Height-v)
 	}
-	return m, nil
+
+	var cmd tea.Cmd
+	m.list, cmd = m.list.Update(msg)
+	return m, cmd
 }
 
-func (m List) View() string {
-	if !m.ready {
-		var s string
-		for i := 0; i < 3; i++ {
-			s += "."
-		}
-        return s
-    }
-	s := "which framework would you like\n\n"
-	for i, choice := range m.choices {
-		cursor := " "
-		if m.cursor == i {
-			cursor = ">"
-		}
-		checked := " "
-		if m.selected == choice {
-			checked = "x"
-		}
-		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice)
-	}
-	s += "\nPress c to confirm.\n"
-	return s
+func (m ListModel) View() string {
+	return docStyle.Render(m.list.View())
 }
 
-func (m List) GetSelectedVal() string {
+func (m ListModel) GetSelectedVal() string {
 	return m.selected
 }

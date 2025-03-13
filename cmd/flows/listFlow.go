@@ -11,7 +11,7 @@ func ListFlow() string {
     if err != nil {
         panic(err)
     }
-    if l, ok := finalModel.(components.List); ok {
+    if l, ok := finalModel.(components.ListModel); ok {
         return l.GetSelectedVal()
     }
     return ""
