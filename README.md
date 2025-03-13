@@ -1,5 +1,8 @@
+
+![weaver_Banner](https://github.com/user-attachments/assets/bd3dec3d-bd8e-4d2e-bf15-fadefb8ad7ed)
 # Weaver
 
+Remember when you start a new backend project and you have to re-write the same stuff again and again everytime T_T, well not anymore :D,
 Weaver is a powerful CLI tool designed to rapidly scaffold backend applications with CRUD operations and authentication, eliminating repetitive boilerplate code.
 
 ## Features
@@ -15,7 +18,7 @@ Weaver is a powerful CLI tool designed to rapidly scaffold backend applications 
     - GitHub
     - Discord
 
-- **MongoDB Integration**: All generated projects come with MongoDB database connectivity out of the box
+- **MongoDB Integration**: All generated projects come with MongoDB database connectivity out of the box (yeah don't worry I'll add others...... later (¬⤙¬ ) )
 
 - **Complete CRUD Operations**: Each project includes ready-to-use endpoints for Create, Read, Update, and Delete operations
 
@@ -77,3 +80,7 @@ After creating your project, you'll need to set up your environment variables:
 ## License
 
 This project is licensed under the Apache License 2.0 - see the LICENSE file for details.
+
+## Personal Notes
+
+yeah I made the mascot myself (don't judge me alright I had some free time (¬_¬") )
