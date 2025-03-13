@@ -1,0 +1,17 @@
+package main
+
+import (
+	"fmt"
+	router "{{ .Name }}/routes"
+    "{{ .Name }}/config"
+	"net/http"
+)
+
+func main() {
+    config.Db()
+	fmt.Println("package main")
+	r := router.Router()
+	fmt.Println("server is getting started")
+	http.ListenAndServe(":5000", r)
+	fmt.Println("Listening at port 5000...")
+}

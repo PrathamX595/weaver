@@ -1,0 +1,31 @@
+package controller
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+    "{{ .Name }}/config"
+    "{{ .Name }}/utils"
+
+	"github.com/gorilla/mux"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+func updateOneUser(id string) {
+	userid, _ := primitive.ObjectIDFromHex(id) //converts string to mongo accepted format
+	filter := bson.M{"_id": userid}
+	update := bson.M{"$set": bson.M{"watched": true}}
+	res, err := config.Col.UpdateOne(context.Background(), filter, update)
+	utils.CheckErr(err)
+	fmt.Println("modified count: ", res.ModifiedCount)
+}
+
+func UpdateUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/x-www-form-urlencode")
+	w.Header().Set("Allow-Control-Allow-Methods", "PUT")
+	params := mux.Vars(r)
+	updateOneUser(params["id"])
+	json.NewEncoder(w).Encode(params["id"])
+}

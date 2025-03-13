@@ -1,0 +1,29 @@
+package routes
+
+import (
+    "{{ .Name }}/controller"
+
+    "github.com/gorilla/mux"
+)
+
+func Router() *mux.Router {
+    r := mux.NewRouter()
+    api := r.PathPrefix("/api").Subrouter()
+    {{- if hasAuth .Auth }}
+    auth := r.PathPrefix("/api/auth").Subrouter()
+	{{- end }}
+
+    api.HandleFunc("/", controller.GetMyAllUsers).Methods("GET")
+    api.HandleFunc("/", controller.CreateUser).Methods("POST")
+    api.HandleFunc("/{id}", controller.UpdateUser).Methods("PUT")
+    api.HandleFunc("/{id}", controller.DeleteOneUser).Methods("DELETE")
+    api.HandleFunc("/", controller.DeleteAllUsers).Methods("DELETE")
+
+    
+    {{- if hasAuth .Auth }}
+    auth.HandleFunc("/{provider}", controller.Auth).Methods("GET")
+    auth.HandleFunc("/{provider}/callback", controller.Callback).Methods("GET")
+    {{- end }}
+
+    return r
+}

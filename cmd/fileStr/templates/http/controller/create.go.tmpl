@@ -1,0 +1,27 @@
+package controller
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"{{ .Name }}/models"
+    "{{ .Name }}/config"
+    "{{ .Name }}/utils"
+)
+
+func insertOneUser(usr models.User) {
+	inserted, err := config.Col.InsertOne(context.Background(), usr)
+	utils.CheckErr(err)
+	fmt.Println("inserted!", inserted)
+}
+
+func CreateUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/x-www-form-urlencode")
+	w.Header().Set("Allow-Control-Allow-Methods", "POST")
+
+	var usr models.User
+	_ = json.NewDecoder(r.Body).Decode(&usr)
+	insertOneUser(usr)
+	json.NewEncoder(w).Encode(usr)
+}

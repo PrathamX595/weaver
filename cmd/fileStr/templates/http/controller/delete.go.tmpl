@@ -1,0 +1,44 @@
+package controller
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+    "{{ .Name }}/config"
+    "{{ .Name }}/utils"
+
+	"github.com/gorilla/mux"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+func deleteOneUser(id string) {
+	userid, _ := primitive.ObjectIDFromHex(id)
+	filter := bson.M{"_id": userid}
+	res, err := config.Col.DeleteOne(context.Background(), filter)
+	utils.CheckErr(err)
+	fmt.Println("Deleted count: ", res)
+}
+
+func deleteAllUsers() int64 {
+	res, err := config.Col.DeleteMany(context.Background(), bson.D{{`{{`}}{{`}}`}}, nil)
+	utils.CheckErr(err)
+	fmt.Println("Deleted count: ", res.DeletedCount)
+	return int64(res.DeletedCount)
+}
+
+func DeleteOneUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/x-www-form-urlencode")
+	w.Header().Set("Allow-Control-Allow-Methods", "DELETE")
+	params := mux.Vars(r)
+	deleteOneUser(params["id"])
+	json.NewEncoder(w).Encode(params["id"])
+}
+
+func DeleteAllUsers(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/x-www-form-urlencode")
+	w.Header().Set("Allow-Control-Allow-Methods", "DELETE")
+	count := deleteAllUsers()
+	json.NewEncoder(w).Encode(count)
+}

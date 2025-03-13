@@ -1,0 +1,34 @@
+package controller
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+    "{{ .Name }}/config"
+    "{{ .Name }}/utils"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+func getAllUsers() []primitive.M {
+	cur, err := config.Col.Find(context.Background(), bson.D{{`{{`}}{{`}}`}})
+	utils.CheckErr(err)
+	var users []primitive.M
+
+	for cur.Next(context.Background()) {
+		var user bson.M
+		err := cur.Decode(&user)
+		utils.CheckErr(err)
+		users = append(users, user)
+	}
+
+	defer cur.Close(context.Background())
+	return users
+}
+
+func GetMyAllUsers(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/x-www-form-urlencode")
+	res := getAllUsers()
+	json.NewEncoder(w).Encode(res)
+}
