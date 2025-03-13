@@ -1,0 +1,21 @@
+package controller
+
+import (
+	"context"
+	"net/http"
+	"{{ .Name }}/config"
+	"{{ .Name }}/models"
+	"{{ .Name }}/utils"
+
+	"github.com/labstack/echo/v4"
+)
+
+func Create(c echo.Context) error {
+	var filter models.User
+	err := c.Bind(&filter) //takes input from body
+	utils.CheckErr(err)
+	insert, err := config.Col.InsertOne(context.Background(), filter)
+	utils.CheckErr(err)
+
+	return c.JSON(http.StatusCreated, insert)
+}

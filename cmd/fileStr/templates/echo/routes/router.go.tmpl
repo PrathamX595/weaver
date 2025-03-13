@@ -1,0 +1,26 @@
+package router
+
+import (
+	"{{ .Name }}/controller"
+
+	"github.com/labstack/echo/v4"
+)
+
+func Router(e *echo.Echo) {
+	api := e.Group("/api")
+	{{- if hasAuth .Auth }}
+	auth := e.Group("/api/auth")
+	{{- end }}
+
+	api.GET("/", controller.GetAll)
+	api.GET("/:id", controller.Get)
+	api.POST("/", controller.Create)
+	api.PUT("/:id", controller.Update)
+	api.DELETE("/:id", controller.Delete)
+	api.DELETE("/", controller.DeleteAll)
+
+	{{- if hasAuth .Auth }}
+	auth.GET("/:provider", controller.Auth)
+	auth.GET("/:provider/callback", controller.Callback)
+	{{- end }}
+}

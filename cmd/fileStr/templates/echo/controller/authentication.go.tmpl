@@ -1,0 +1,130 @@
+package controller
+
+import (
+    "{{ .Name }}/auth"
+    "{{ .Name }}/utils"
+    {{- if contains "discord" .Auth }}
+    "encoding/json"
+    "net/http"
+    {{- end}}
+    "log"
+
+    "github.com/labstack/echo/v4"
+)
+
+func Auth(c echo.Context) error {
+    provider := c.Param("provider")
+    
+    {{- if contains "google" .Auth }}
+    if provider == "google" {
+        path := auth.ConfigGoogle()
+        url := path.AuthCodeURL("state")
+        return c.Redirect(302, url)
+    }
+    {{- end }}
+    
+    {{- if contains "github" .Auth }}
+    if provider == "github" {
+        path := auth.ConfigGithub()
+        url := path.AuthCodeURL("")
+        return c.Redirect(302, url)
+    }
+    {{- end }}
+    
+    {{- if contains "discord" .Auth }}
+    if provider == "discord" {
+        path := auth.ConfigDiscord()
+        url := path.AuthCodeURL("state")
+        return c.Redirect(302, url)
+    }
+    {{- end }}
+    
+    log.Println("error no supported provider")
+    return c.JSON(400, map[string]interface{}{"error": "Unsupported provider"})
+}
+
+func Callback(c echo.Context) error {
+    provider := c.Param("provider")
+    
+    {{- if contains "google" .Auth }}
+    if provider == "google" {
+        token, err := auth.ConfigGoogle().Exchange(c.Request().Context(), c.FormValue("code"))
+        if err != nil {
+            utils.CheckErr(err)
+            return c.JSON(500, map[string]interface{}{"error": "Failed to exchange token"})
+        }
+        
+        email := auth.GetEmail(token.AccessToken)
+        pic := auth.GetPicture(token.AccessToken)
+        return c.JSON(200, map[string]interface{}{
+            "email": email, 
+            "login": true, 
+            "token": token.AccessToken, 
+            "picture": pic,
+        })
+    }
+    {{- end }}
+    
+    {{- if contains "github" .Auth }}
+    if provider == "github" {
+        token, err := auth.ConfigGithub().Exchange(c.Request().Context(), c.FormValue("code"))
+        if err != nil {
+            utils.CheckErr(err)
+            return c.JSON(500, map[string]interface{}{"error": "Failed to exchange token"})
+        }
+        
+        email := auth.GetEmailGithub(token.AccessToken)
+        return c.JSON(200, map[string]interface{}{
+            "email": email, 
+            "login": true, 
+            "token": token.AccessToken,
+        })
+    }
+    {{- end }}
+    
+    {{- if contains "discord" .Auth }}
+    if provider == "discord" {
+        token, err := auth.ConfigDiscord().Exchange(c.Request().Context(), c.FormValue("code"))
+        if err != nil {
+            utils.CheckErr(err)
+            return c.JSON(500, map[string]interface{}{"error": "Failed to exchange token"})
+        }
+        
+        email := auth.GetDiscordEmail(token.AccessToken)
+
+        req, err := http.NewRequest("GET", "https://discord.com/api/users/@me", nil)
+        if err != nil {
+            utils.CheckErr(err)
+            return c.JSON(500, map[string]interface{}{"error": "Failed to create request"})
+        }
+        
+        req.Header.Set("Authorization", "Bearer "+token.AccessToken)
+
+        client := &http.Client{}
+        resp, err := client.Do(req)
+        if err != nil {
+            utils.CheckErr(err)
+            return c.JSON(500, map[string]interface{}{"error": "Failed to execute request"})
+        }
+        defer resp.Body.Close()
+
+        var user struct {
+            ID string `json:"id"`
+        }
+        if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+            utils.CheckErr(err)
+            return c.JSON(500, map[string]interface{}{"error": "Failed to decode user data"})
+        }
+
+        avatar := auth.GetDiscordAvatar(token.AccessToken, user.ID)
+        return c.JSON(200, map[string]interface{}{
+            "email":   email,
+            "login":   true,
+            "token":   token.AccessToken,
+            "picture": avatar,
+        })
+    }
+    {{- end }}
+    
+    return c.JSON(400, map[string]interface{}{"error": "Invalid provider"})
+}

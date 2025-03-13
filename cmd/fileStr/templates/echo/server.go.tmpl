@@ -1,0 +1,17 @@
+package main
+
+import (
+	"{{ .Name }}/config"
+	router "{{ .Name }}/routes"
+
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+)
+
+func main() {
+	config.Db()
+	e := echo.New()
+    e.Use(middleware.CORS())
+	router.Router(e)
+	e.Start(":5000")
+}

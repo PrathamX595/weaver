@@ -1,0 +1,13 @@
+package utils
+
+import (
+	"log"
+)
+
+type NextFunc func()
+
+func CheckErr(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
